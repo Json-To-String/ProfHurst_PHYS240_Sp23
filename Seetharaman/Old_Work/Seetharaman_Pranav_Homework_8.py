@@ -6,7 +6,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-
+def temp_analytic(n_max, x, t, L, x_0, kappa):
+    # Analytical temperature function using method of images
+    # Create range to sum over
+    sum_range = np.arange(-n_max, n_max + 1)
+    t_mesh, x_mesh, n_mesh = np.meshgrid(t, x, sum_range)
+    # shift t to sigma squared
+    sigma_squared = 2 * kappa * t_mesh
+    # find the coefficient
+    coeff = 1 / np.sqrt(2 * np.pi * sigma_squared)
+    # find the temperature
+    temp_unsummed = ((-1) ** np.abs(n_mesh)) * coeff * np.exp(- (((x_mesh + (n_mesh * L)) - x_0) ** 2) / (2 * sigma_squared))
+    # Return array summed along the n axis
+    return(np.sum(temp_unsummed, axis=2))
 
 # Initialize parameters (time step, grid spacing, etc.)
 tau = eval(input('Enter time step: '))
@@ -63,6 +75,9 @@ ax.set_ylabel('x')
 ax.set_zlabel(r'T(x,t)')
 ax.set_title('Diffusion of a delta spike')
 
+plt.savefig("mesh_grid.pdf")
+plt.close()
+
 # Plot temperature versus x and t as a contour plot
 fig2, ax2 = plt.subplots()
 levels = np.linspace(0.0, 10.0, num=21)
@@ -71,6 +86,51 @@ ax2.clabel(ct, fmt='%1.2f')
 ax2.set_xlabel('Time')
 ax2.set_ylabel('x')
 ax2.set_title('Temperature contour plot')
+
+plt.savefig("numerical_contour.pdf")
+plt.close()
+
+# Plot analytic temperature vs x and t as a contour plot
+analytic_temp = temp_analytic(10, xplot, tplot, L, 0, kappa)
+figA, axA = plt.subplots()
+ct = axA.contour(tplot, xplot, analytic_temp, levels)
+axA.clabel(ct, fmt='%1.2f')
+axA.set_xlabel('Time')
+axA.set_ylabel('x')
+axA.set_title('Analytic Temperature contour plot')
+
+plt.savefig("analytic_contour.pdf")
+plt.close()
+
+# Plot Analaytic temp for garcia figure
+xplot_extra = np.linspace(-1.5, 1.5, num = 1000)
+analytic_temp = temp_analytic(1, xplot_extra, 0.003, L, 0, kappa)
+figB, axB = plt.subplots()
+axB.plot(xplot_extra, analytic_temp)
+axB.set_xlabel('x/L')
+axB.set_ylabel('T(x, t)')
+axB.set_title('Analytic Temperature via Method of Images at t = 0.03')
+axB.vlines(-0.5, -6, 6, linestyles='dashed')
+axB.vlines(0.5, -6, 6, linestyles='dashed')
+axB.set_ylim([-6, 6])
+
+plt.savefig("analytic_garcia.pdf")
+plt.close()
+
+# Plot absolute difference between analytic and numerical solutions
+figC, axC =plt.subplots()
+temp_diff = np.abs(temp_analytic(10, xplot, tplot, L, 0, kappa) - ttplot)
+axC.set_title(r'Absolute Temperature Difference at $\Delta t = {0:.2e}t_a$'.format(tau/t_natural))
+axC.plot(xplot, temp_diff[:, 1], label='{0:.2e}'.format(tplot[1]))
+axC.plot(xplot, temp_diff[:, 10], label='{0:.2e}'.format(tplot[10]))
+axC.plot(xplot, temp_diff[:, 25], label='{0:.2e}'.format(tplot[25]))
+axC.plot(xplot, temp_diff[:, -1], label='{0:.2e}'.format(tplot[-1]))
+axC.legend(title=r'$t$')
+axC.set_xlabel(r'$x$')
+axC.set_ylabel(r'$|T_a(x, t) - T_c(x, t)|$')
+
+plt.savefig("1d_slice_diff.pdf")
+plt.close()
 
 # Plot 1D slices of the temperature distribution vs. space at short and long times
 fig3, ax3 =plt.subplots()
@@ -83,4 +143,5 @@ ax3.legend(title=r'$t$')
 ax3.set_xlabel(r'$x$')
 ax3.set_ylabel(r'$T(x, t)$')
 
-plt.show()
+plt.savefig("1d_slice.pdf")
+plt.close()
